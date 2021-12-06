@@ -197,6 +197,7 @@ for contour in contours:
 
 # make model predictions on extracted ports
 # show the extracted ports in a 9x9 grid
+port_results = []
 for i in range(len(ports_extracted)):
 
     # predict on the model
@@ -210,6 +211,7 @@ for i in range(len(ports_extracted)):
     # ax.title.set_text(cls)
 
     loc = ports_locations[i]
+    port_results.append(cls)
     cv.putText(annotated_img, cls, (loc[0]-60, loc[1]-30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
 
     # plt.imshow(ports_extracted[i])
