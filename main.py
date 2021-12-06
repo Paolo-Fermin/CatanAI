@@ -1120,17 +1120,16 @@ for i in range(18, 36):
 
 # tie points to ship
 def distanceFromShipAndPoint(ship, point):
-    M = cv.moments(ship)
-    cX = int(M["m10"] / M["m00"])
-    cY = int(M["m01"] / M["m00"])
+    cX = ship[0]
+    cY = ship[1]
     return math.sqrt( ((cX - point[0])**2) + ((cY - point[1])**2))
 
 shipPoints = []
-for c in contours:
+for portLocation in ports_locations:
     minDistance = 99999
     minPoint = 0
     for i in range(18):
-        curDistance = distanceFromShipAndPoint(c, points[i])
+        curDistance = distanceFromShipAndPoint(portLocation, points[i])
         if curDistance < minDistance:
             minPoint = i
             minDistance = curDistance
@@ -1270,11 +1269,11 @@ for i in range(len(XCoordinates)):
     
     if (tile_num[i] == 36):
         cv.fillPoly(blank_image, [pts], (0, 0, 0))
-        cv.putText(blank_image, str(tile_num[i]), (XCoordinates[i] - 20, YCoordinates[i] - 15), cv.FONT_HERSHEY_SIMPLEX, .3, (255, 255, 255), 1)
+        # cv.putText(blank_image, str(tile_num[i]), (XCoordinates[i] - 20, YCoordinates[i] - 15), cv.FONT_HERSHEY_SIMPLEX, .3, (255, 255, 255), 1)
     else:
         cur_color = typeToColor(tiles[tile_num[i]])
         cv.fillPoly(blank_image, [pts], cur_color)
-        cv.putText(blank_image, str(tile_num[i]), (XCoordinates[i] - 20, YCoordinates[i] - 15), cv.FONT_HERSHEY_SIMPLEX, .3, (0, 0, 0), 1)
+        # cv.putText(blank_image, str(tile_num[i]), (XCoordinates[i] - 20, YCoordinates[i] - 15), cv.FONT_HERSHEY_SIMPLEX, .3, (0, 0, 0), 1)
 
 for i in range(len(settlementXCoodinates)):
     colorStr = settlement_color_dict[i]
@@ -1306,9 +1305,29 @@ for i in range(len(roadSettlements)):
         drawRoad(blank_image, (settlementXCoodinates[settlementPair[0]], settlementYCoodinates[settlementPair[0]]), (settlementXCoodinates[settlementPair[1]], settlementYCoodinates[settlementPair[1]]), (255, 255, 255))
         # cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (0, 0, 0), 1)
 
-for pointIndex in shipPoints:
+woodColor = (0,100,0)
+sheepColor = (144,238,144)
+wheatColor = (255,215,0)
+stoneColor = (145, 142, 133)
+brickColor = (220, 85, 57)
+
+
+for i in range(len(shipPoints)):
+    pointIndex = shipPoints[i]
     shipSettlements = shipToSettlement[pointIndex]
-    cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, (111, 78, 55), -1)
+    port_type = port_results[i]
+    if (port_type == "wood"):
+        cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, woodColor, -1)
+    if (port_type == "brick"):
+        cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, brickColor, -1)
+    if (port_type == "sheep"):
+        cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, sheepColor, -1)
+    if (port_type == "wheat"):
+        cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, wheatColor, -1)
+    if (port_type == "question"):
+        cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, (0, 0, 200), -1)
+    if (port_type == "stone"):
+        cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, stoneColor, -1)
     drawRoad(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), (settlementXCoodinates[shipSettlements[0]], settlementYCoodinates[shipSettlements[0]]), (111, 78, 55))
     drawRoad(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), (settlementXCoodinates[shipSettlements[1]], settlementYCoodinates[shipSettlements[1]]), (111, 78, 55))
 
