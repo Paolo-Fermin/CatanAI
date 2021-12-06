@@ -12,6 +12,7 @@ import tensorflow_datasets as tfds
 
 path_to_image = 'photos/test5_1.jpg'
 path_to_ship_detection_model = './models/ship_detection_model_2'
+path_to_num_detection_model = './models/white_edges_classifier_2'
 
 
 # Import image, resize, and convert to other useful formats
@@ -61,6 +62,24 @@ ship_model.save_weights('model.h5')
 ship_model.save('full_model.h5')
 
 ship_class_names = ['brick', 'question', 'sheep', 'stone', 'wheat', 'wood']
+
+
+num_class_names = ['eight', 'eleven', 'five', 'four', 'nine', 'six', 'ten', 'three', 'twelve', 'two']
+
+
+num_model = tf.keras.models.load_model(path_to_num_detection_model)
+# Check its architecture
+num_model.summary()
+
+# save the model to a json format
+model_json = num_model.to_json()
+
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
+    # serialize weights to h5
+num_model.save_weights('model.h5')
+# export the whole model to h5
+num_model.save('full_model.h5')
 
 ############################################
 # Port detection
@@ -167,10 +186,10 @@ for contour in contours:
     hor_diff = int((w-128)/2)
     ver_diff = int((h-128)/2)
     # print(f"hor diff, ver diff: {hor_diff}, {ver_diff}")
-    print(f"w, h: {w}, {h}")
-    print(f"ver_diff, h-ver_diff: {ver_diff}, {h-ver_diff}")
-    print(f"hor_diff, w-hor_diff: {hor_diff}, {w-hor_diff}")
-    print(f'ydiff, xdiff: {(h-ver_diff)-ver_diff}, {(w-hor_diff)-hor_diff}')
+    # print(f"w, h: {w}, {h}")
+    # print(f"ver_diff, h-ver_diff: {ver_diff}, {h-ver_diff}")
+    # print(f"hor_diff, w-hor_diff: {hor_diff}, {w-hor_diff}")
+    # print(f'ydiff, xdiff: {(h-ver_diff)-ver_diff}, {(w-hor_diff)-hor_diff}')
     ydiff = (h-ver_diff)-ver_diff
     xdiff = (w-hor_diff)-hor_diff
 
@@ -185,9 +204,12 @@ for contour in contours:
     ports_extracted.append(img_high_res[y+ver_diff:y+h-ver_diff+offsety, x+hor_diff:x+w-hor_diff+offsetx])
     ports_locations.append([int((x+w/2)/2),int((y+h/2)/2)])
 # # show the image
-# plt.figure(figsize=(6,6))
-# plt.imshow(annotated_img)
-# plt.show()
+# for loc in ports_locations:
+    # cv.circle(annotated_img, (loc[0], loc[1]), 10, (255,255,255),-1)
+
+plt.figure(figsize=(6,6))
+plt.imshow(annotated_img)
+plt.show()
 
 # # Show the extracted ports in a 9x9 grid
 # for i in range(len(ports_extracted)):
@@ -407,7 +429,6 @@ for i, circ in enumerate(num_locs):
         type = 'sheep'
     cv.putText(annotated_img, type, (circ[0]-35, circ[1]+50), cv.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
 
-print(f"bandit loc: {bandit_loc}")
 if len(bandit_loc) == 1:
     cv.putText(annotated_img, 'bandit', (bandit_loc[0][0]-35, bandit_loc[0][1]+50), cv.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
 
@@ -728,6 +749,48 @@ all_res_total = all_res_road + all_res_settle
 # plt.show()
 
 road_set_labeled_img = img.copy()
+
+########################
+# Detect numbers
+########################
+nums_to_detect = []
+for pt in points[18:36]:
+    wo2=40
+    high_res_pt = (int(pt[0])*2, int(pt[1])*2)
+    # cv.circle(img_high_res, high_res_pt, 64, (0, 255, 0), -1)
+    cv.rectangle(img_high_res, pt1=(high_res_pt[0]-wo2, high_res_pt[1]-wo2), pt2=(high_res_pt[0]+wo2,high_res_pt[1]+wo2), color=(255, 255, 0), thickness=2)
+    circ_img = img_high_res[high_res_pt[1]-wo2:high_res_pt[1]+wo2,high_res_pt[0]-wo2:high_res_pt[0]+wo2]
+    circ_img_resized = cv.resize(circ_img, (128,128))
+    nums_to_detect.append(circ_img_resized)
+plt.figure(figsize=(6,6))
+plt.imshow(circ_img)
+plt.show()
+
+nums_locations = []
+for i in range(len(nums_to_detect)):
+
+    # predict on the model
+    prediction = num_model.predict(np.expand_dims(nums_to_detect[i], axis=0))
+
+    idx = np.argmax(prediction)
+
+    cls = num_class_names[idx]
+
+    # ax = plt.subplot(3,3,i+1)
+    # ax.title.set_text(cls)
+
+    loc = points[i+18]
+    port_results.append(cls)
+    print(f"cls: {cls}")
+    cv.putText(annotated_img, cls, (int(loc[0]-60), int(loc[1]-30)), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+
+    # plt.imshow(nums_extracted[i])
+    # plt.xticks([]), plt.yticks([])
+
+plt.figure(figsize=(6,6))
+plt.imshow(annotated_img)
+plt.show()
+
 
 # Crue if c1 between c2_l and c2_h, false otherwise
 def between_color_range(c1,c2_l,c2_h):
