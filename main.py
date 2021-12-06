@@ -4,16 +4,27 @@ from matplotlib import pyplot as plt
 import imutils
 import math
 from collections import defaultdict
+import os
+import PIL
+import PIL.Image
+import tensorflow as tf
+import tensorflow_datasets as tfds
+
+path_to_image = 'photos/test5_1.jpg'
+path_to_ship_detection_model = './models/ship_detection_model_2'
+
 
 # Import image, resize, and convert to other useful formats
 # img_orig = cv.imread('photos/testimg3.jpg')
-img_orig = cv.imread('photos/test5_1.jpg')
+img_orig = cv.imread(path_to_image)
+img_high_res = cv.cvtColor(imutils.resize(img_orig, width=2000), cv.COLOR_BGR2RGB)
 img_orig = imutils.resize(img_orig, width=1000)
 img_gray = cv.cvtColor(img_orig, cv.COLOR_BGR2GRAY)
 img = cv.cvtColor(img_orig, cv.COLOR_BGR2RGB)
 img_hsv = cv.cvtColor(img_orig, cv.COLOR_BGR2HSV)
 img_h = img_hsv[:,:,0]
 
+# Create image for drawing
 annotated_img = img.copy()
 
 
@@ -32,68 +43,98 @@ box_h = 20
 nonblack_px_thresh = 250
 
 ############################################
+# Import models
+############################################
+ship_model = tf.keras.models.load_model(path_to_ship_detection_model)
+ship_model.summary()
+
+# save the model to a json format
+model_json = ship_model.to_json()
+
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
+
+# serialize weights to h5
+ship_model.save_weights('model.h5')
+
+# export the whole model to h5
+ship_model.save('full_model.h5')
+
+ship_class_names = ['brick', 'question', 'sheep', 'stone', 'wheat', 'wood']
+
+############################################
 # Port detection
 ############################################
 
-# Get canny edges
-edges = cv.Canny(img,500,700)
+def detect_ports(img_in, annotate=False):
+    # Get canny edges
+    edges = cv.Canny(img,500,700)
 
-# Get blue mask
+    # Get blue mask
 
-# Create boundaries
-hsv = cv.cvtColor(img, cv.COLOR_RGB2HSV)
-blue_lower=np.array([80,140,200],np.uint8)
-blue_upper=np.array([140,255,255],np.uint8)
+    # Create boundaries
+    hsv = cv.cvtColor(img_in, cv.COLOR_RGB2HSV)
+    blue_lower=np.array([80,140,200],np.uint8)
+    blue_upper=np.array([140,255,255],np.uint8)
 
-# Find mask
-blue_mask = cv.inRange(hsv, blue_lower, blue_upper)
+    # Find mask
+    blue_mask = cv.inRange(hsv, blue_lower, blue_upper)
 
-# Dilate
-blue_mask = cv.dilate(blue_mask,(17,17),iterations=15)
+    # Dilate
+    blue_mask = cv.dilate(blue_mask,(17,17),iterations=15)
 
-# Mask image with blue mask
-res = cv.bitwise_and(img,img, mask=blue_mask)
+    # Mask image with blue mask
+    res = cv.bitwise_and(img_in,img_in, mask=blue_mask)
 
-## Expand blue mask outwards
+    ## Expand blue mask outwards
 
-# Create flood masks
-h, w = img.shape[:2]
-flood_mask = np.zeros((h+2, w+2), np.uint8)
+    # Create flood masks
+    h, w = img_in.shape[:2]
+    flood_mask = np.zeros((h+2, w+2), np.uint8)
 
-# Flood fill each corner to extract the board from the background
-cv.floodFill(blue_mask, flood_mask, (0,0), 255)
-cv.floodFill(blue_mask, flood_mask, (w-1,0), 255)
-cv.floodFill(blue_mask, flood_mask, (0,h-1), 255)
-cv.floodFill(blue_mask, flood_mask, (w-1,h-1), 255)
+    # Flood fill each corner to extract the board from the background
+    cv.floodFill(blue_mask, flood_mask, (0,0), 255)
+    cv.floodFill(blue_mask, flood_mask, (w-1,0), 255)
+    cv.floodFill(blue_mask, flood_mask, (0,h-1), 255)
+    cv.floodFill(blue_mask, flood_mask, (w-1,h-1), 255)
 
-# Get image of only board from mask
-blue_mask_inv = cv.bitwise_not(blue_mask)
-cropped_img = cv.bitwise_and(img,img, mask=blue_mask_inv)
+    # Get image of only board from mask
+    blue_mask_inv = cv.bitwise_not(blue_mask)
+    cropped_img = cv.bitwise_and(img_in,img_in, mask=blue_mask_inv)
 
-## Get ship contours
+    ## Get ship contours
 
-# Get center of mass of all pixels in blue mask
-mass_x, mass_y = np.where(blue_mask <= 0)
-cent_x = int(np.average(mass_x))
-cent_y = int(np.average(mass_y))
+    # Get center of mass of all pixels in blue mask
+    mass_x, mass_y = np.where(blue_mask <= 0)
+    cent_x = int(np.average(mass_x))
+    cent_y = int(np.average(mass_y))
 
-# Get mask of all ships
-ship_flood_mask = np.zeros((h+2, w+2), np.uint8)
-ship_mask = blue_mask.copy()
-cv.floodFill(ship_mask, ship_flood_mask, (cent_x,cent_y), 255)
-ship_mask_inv = cv.bitwise_not(ship_mask)
+    # Get mask of all ships
+    ship_flood_mask = np.zeros((h+2, w+2), np.uint8)
+    ship_mask = blue_mask.copy()
+    cv.floodFill(ship_mask, ship_flood_mask, (cent_x,cent_y), 255)
+    ship_mask_inv = cv.bitwise_not(ship_mask)
 
-# Find contours in mask
-contours, hierarchy = cv.findContours(image=ship_mask_inv, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_NONE)
+    # Find contours in mask
+    contours, hierarchy = cv.findContours(image=ship_mask_inv, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_NONE)
 
-# Sort contours in decreasing order and take largest 9, which should correspond to the ports
-contours = sorted(contours, key=lambda x:cv.contourArea(x), reverse=True)
-contours = contours[0:9]
+    # Sort contours in decreasing order and take largest 9, which should correspond to the ports
+    contours = sorted(contours, key=lambda x:cv.contourArea(x), reverse=True)
+    contours = contours[0:9]
 
-# Draw contours on annotated image
-cv.drawContours(image=annotated_img, contours=contours, contourIdx=-1, color=(0, 255, 0), thickness=2, lineType=cv.LINE_AA)
-ship_img = cv.bitwise_and(img,img, mask=ship_mask_inv)
+    # Draw contours on annotated image
+    if annotate:
+        cv.drawContours(image=annotated_img, contours=contours, contourIdx=-1, color=(0, 255, 0), thickness=2, lineType=cv.LINE_AA)
+    ship_img = cv.bitwise_and(img_in,img_in, mask=ship_mask_inv)
 
+    ship_img_mask = np.where(ship_img==0,0,255)
+    land_img = cropped_img.copy()
+    land_img = np.where(ship_img!=0,0,land_img)
+
+    return contours, land_img
+
+_, land_img = detect_ports(img, True)
+contours, _ = detect_ports(img_high_res)
 # # see ship img
 # plt.figure(figsize=(10, 10))
 # plt.subplot(121),plt.imshow(annotated_img)
@@ -102,16 +143,81 @@ ship_img = cv.bitwise_and(img,img, mask=ship_mask_inv)
 # plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
 # plt.show()
 
-ship_img_mask = np.where(ship_img==0,0,255)
-land_img = cropped_img.copy()
-land_img = np.where(ship_img!=0,0,land_img)
 
 # plt.figure(figsize=(6,6))
 # plt.imshow(land_img)
 # plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
 # plt.show()
 
+## Extract port locations and feed each to model for detection
 
+ports_extracted = []
+ports_locations = []
+# Get the bounding box of all the contours
+port_detect_img = img.copy()
+# port_detect_img = cv.copyMakeBorder(port_detect_img, 128, 128, 128, 128, cv.BORDER_REPLICATE)
+for contour in contours:
+    x,y,w,h = cv.boundingRect(contour)
+
+    low_res_pt = (int(x/2), int(y/2))
+    low_res_wh = (int(w/2), int(h/2))
+    # cv.rectangle(img=annotated_img, pt1=low_res_pt, pt2=(low_res_pt[0]+low_res_wh[0],low_res_pt[1]+low_res_wh[1]), color=(255, 255, 0), thickness=2)
+
+    # Get a rectange of 128x128 with the original rectangle at the center
+    hor_diff = int((w-128)/2)
+    ver_diff = int((h-128)/2)
+    # print(f"hor diff, ver diff: {hor_diff}, {ver_diff}")
+    print(f"w, h: {w}, {h}")
+    print(f"ver_diff, h-ver_diff: {ver_diff}, {h-ver_diff}")
+    print(f"hor_diff, w-hor_diff: {hor_diff}, {w-hor_diff}")
+    print(f'ydiff, xdiff: {(h-ver_diff)-ver_diff}, {(w-hor_diff)-hor_diff}')
+    ydiff = (h-ver_diff)-ver_diff
+    xdiff = (w-hor_diff)-hor_diff
+
+    # Draw the rectangle on the original image
+    # cv.rectangle(img=annotated_img, pt1=(x+hor_diff,y+ver_diff), pt2=(x+hor_diff+128,y+ver_diff+128), color=(0, 255, 0), thickness=2)
+    # cv.rectangle(img=annotated_img, pt1=(x+w-64,y+h-64), pt2=(x+w+64,y+h+64), color=(0, 255, 0), thickness=2)
+    # cv.rectangle(img=annotated_img, pt1=(x+hor_diff,y+ver_diff), pt2=(x+w-hor_diff,y+h-ver_diff), color=(0, 255, 0), thickness=2)
+
+    # Get the rectangle
+    offsety = 128 - ydiff
+    offsetx = 128 - xdiff
+    ports_extracted.append(img_high_res[y+ver_diff:y+h-ver_diff+offsety, x+hor_diff:x+w-hor_diff+offsetx])
+    ports_locations.append([int((x+w/2)/2),int((y+h/2)/2)])
+# # show the image
+# plt.figure(figsize=(6,6))
+# plt.imshow(annotated_img)
+# plt.show()
+
+# # Show the extracted ports in a 9x9 grid
+# for i in range(len(ports_extracted)):
+#     plt.subplot(3,3,i+1),plt.imshow(ports_extracted[i])
+#     plt.xticks([]), plt.yticks([])
+# plt.show()
+
+# make model predictions on extracted ports
+# show the extracted ports in a 9x9 grid
+for i in range(len(ports_extracted)):
+
+    # predict on the model
+    prediction = ship_model.predict(np.expand_dims(ports_extracted[i], axis=0))
+
+    idx = np.argmax(prediction)
+
+    cls = ship_class_names[idx]
+
+    # ax = plt.subplot(3,3,i+1)
+    # ax.title.set_text(cls)
+
+    loc = ports_locations[i]
+    cv.putText(annotated_img, cls, (loc[0]-60, loc[1]-30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+
+    # plt.imshow(ports_extracted[i])
+    # plt.xticks([]), plt.yticks([])
+
+plt.figure(figsize=(6,6))
+plt.imshow(annotated_img)
+plt.show()
 
 
 ############################################
@@ -299,6 +405,7 @@ for i, circ in enumerate(num_locs):
         type = 'sheep'
     cv.putText(annotated_img, type, (circ[0]-35, circ[1]+50), cv.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
 
+print(f"bandit loc: {bandit_loc}")
 if len(bandit_loc) == 1:
     cv.putText(annotated_img, 'bandit', (bandit_loc[0][0]-35, bandit_loc[0][1]+50), cv.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
 
