@@ -294,7 +294,7 @@ for i, circ in enumerate(num_locs):
         hsv[2] >= 75 and hsv[2] <= 130:
         type = 'wood'
     elif hsv[0] >= 32 and hsv[0] <= 45 and \
-        hsv[1] >= 80 and hsv[1] <= 150 and \
+        hsv[1] >= 80 and hsv[1] <= 160 and \
         hsv[2] >= 120 and hsv[2] <= 200:
         type = 'sheep'
     cv.putText(annotated_img, type, (circ[0]-35, circ[1]+50), cv.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
@@ -555,7 +555,7 @@ for num in neighbor_sets:
         cv.fillPoly(road_mask, [box_pts], (255,255,255))
         cv.fillPoly(road_mask_all, [box_pts], (255,255,255))
         road_masks.append(road_mask)
-        road_settle_locs.append({"pts":[first_pt, second_pt], "loc":road_loc, "mask":road_mask, "neighbors":[num, neighbor], "type":"road"})
+        road_settle_locs.append({"pts":[num, neighbor], "loc":road_loc, "mask":road_mask, "neighbors":[num, neighbor], "type":"road"})
         neighbor_pairs.append([first_pt, second_pt])
 
 # Find possible settlement locations
@@ -585,7 +585,7 @@ for num in neighbor_sets:
         cv.circle(settlement_mask_all, settlement_loc, check_settlement_radius, (255,255,255), -1)
         cv.circle(settlement_mask, settlement_loc, check_settlement_radius, (255,255,255), -1)
         # settlement_locs.append({"pts":[first_pt, second_pt, third_pt], "loc":settlement_loc, "mask":settlement_mask, "neighbors":pair})
-        road_settle_locs.append({"pts":[first_pt, second_pt, third_pt], "loc":settlement_loc, "mask":settlement_mask, "neighbors":pair, "type":"settlement"})
+        road_settle_locs.append({"pts":[num, pair[0], pair[1]], "loc":settlement_loc, "mask":settlement_mask, "neighbors":pair, "type":"settlement"})
         settlement_masks.append(settlement_mask)
 
 # plt.figure(figsize=(11,11))
@@ -625,6 +625,141 @@ def between_color_range(c1,c2_l,c2_h):
     if c1[0] > c2_l[0] and c1[1] > c2_l[1] and c1[2] > c2_l[2] and c1[0] < c2_h[0] and c1[1] < c2_h[1] and c1[2] < c2_h[2]:
         return True
     return False
+
+pointsToRoadIndex = {
+    "15,28,": 0,
+    "14,28,": 1,
+    "14,27,": 2,
+    "13,27,": 3,
+    "13,26,": 4,
+    "12,26,": 5,
+    "11,26,": 6,
+    "11,25,": 7,
+    "10,25,": 8,
+    "10,24,": 9,
+    "9,24,": 10,
+    "8,24,": 11,
+    "8,23,": 12,
+    "7,23,": 13,
+    "7,22,": 14,
+    "6,22,": 15,
+    "5,22,": 16,
+    "5,21,": 17,
+    "4,21,": 18,
+    "4,20,": 19,
+    "3,20,": 20,
+    "2,20,": 21,
+    "2,19,": 22,
+    "1,19,": 23,
+    "1,18,": 24,
+    "0,18,": 25,
+    "17,18,": 26,
+    "17,29,": 27,
+    "16,29,": 28,
+    "16,28,": 29,
+    "28,35,": 30,
+    "27,35,": 31,
+    "27,34,": 32,
+    "26,34,": 33,
+    "25,34,": 34,
+    "25,33,": 35,
+    "24,33,": 36,
+    "23,33,": 37,
+    "23,32,": 38,
+    "22,32,": 39,
+    "21,32,": 40,
+    "21,31,": 41, #----
+    "20,31,": 42,
+    "19,31,": 43,
+    "19,30,": 44,
+    "18,30,": 45,
+    "29,30,": 46,
+    "29,35,": 47, #---
+    "35,36,": 48,
+    "34,36,": 49,
+    "33,36,": 50,
+    "32,36,": 51,
+    "31,36,": 52,
+    "30,36,": 53, #----
+    "28,29,": 54,
+    "27,28,": 55,
+    "26,27,": 56,
+    "25,26,": 57,
+    "24,25,": 58,
+    "23,24,": 59,
+    "22,23,": 60,
+    "21,22,": 61,
+    "20,21,": 62,
+    "19,20,": 63,
+    "18,19,": 64,
+    "18,29,": 65,
+    "30,35,": 66, #--
+    "34,35,": 67,
+    "33,34,": 68,
+    "32,33,": 69,
+    "31,32,": 70,
+    "30,31,": 71,
+}
+
+pointsToSettlementIndex = {
+    "14,15,28,": 0,
+    "13,14,27,": 1,
+    "12,13,26,": 2,
+    "15,16,28,": 3,
+    "14,27,28,": 4,
+    "13,26,27,": 5,
+    "11,12,26,": 6,
+    "16,28,29,": 7,
+    "27,28,35,": 8,
+    "26,27,34,": 9, #-----
+    "11,25,26,": 10,
+    "16,17,29,": 11,
+    "28,29,35,": 12,
+    "27,34,35,": 13,
+    "25,26,34,": 14,
+    "10,11,25,": 15,
+    "17,18,29,": 16,
+    "29,30,35,": 17,
+    "34,35,36,": 18,
+    "25,33,34,": 19,
+    "10,24,25,": 20,
+    "0,17,18,": 21,
+    "18,29,30,": 22,
+    "30,35,36,": 23,
+    "33,34,36,": 24,
+    "24,25,33,": 25,
+    "8,10,24,": 26,
+    "0,1,18,": 27,
+    "18,19,30,": 28,
+    "30,31,36,": 29,
+    "32,33,36,": 30,
+    "23,24,33,": 31,
+    "8,9,24,": 32, #---
+    "1,18,19,": 33,
+    "19,30,31,": 34,
+    "31,32,36,": 35,
+    "23,32,33,": 36,
+    "8,23,24,": 37, #----
+    "1,2,19,": 38,
+    "19,20,31,": 39,
+    "21,31,32,": 40,
+    "22,23,32,": 41,
+    "7,8,23,": 42,
+    "2,19,20,": 43,
+    "20,21,31,": 44,
+    "21,22,32,": 45,
+    "17,22,23,": 46,
+    "2,3,20,": 47,
+    "4,20,21,": 48,
+    "5,21,22,": 49,
+    "6,7,22,": 50,
+    "3,4,20,": 51,
+    "4,5,21,": 52,
+    "5,6,22,": 53
+}
+
+settlement_color_dict = defaultdict(lambda: None)
+road_color_dict = defaultdict(lambda: None)
 
 for info in road_settle_locs:
     
@@ -675,26 +810,76 @@ for info in road_settle_locs:
             label = "O"
             if info["type"] == "road":
                 label += "R"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(int(pt)) + ","
+                road_index = pointsToRoadIndex[key]
+                road_color_dict[road_index] = "O"
             elif info["type"] == "settlement":
                 label += "S"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(int(pt)) + ","
+                settlement_index = pointsToSettlementIndex[key]
+                settlement_color_dict[settlement_index] = "O"
         elif between_color_range(dom, blue_rgb_l, blue_rgb_h):
             label = "B"
             if info["type"] == "road":
                 label += "R"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(int(pt)) + ","
+                road_index = pointsToRoadIndex[key]
+                road_color_dict[road_index] = "B"
             elif info["type"] == "settlement":
                 label += "S"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(pt) + ","
+                settlement_index = pointsToSettlementIndex[key]
+                settlement_color_dict[settlement_index] = "B"
         elif between_color_range(dom, white_rgb_l, white_rgb_h):
             label = "W"
             if info["type"] == "road":
                 label += "R"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(int(pt)) + ","
+                road_index = pointsToRoadIndex[key]
+                road_color_dict[road_index] = "W"
             elif info["type"] == "settlement":
                 label += "S"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(pt) + ","
+                settlement_index = pointsToSettlementIndex[key]
+                settlement_color_dict[settlement_index] = "W"
+
+                
         elif between_color_range(dom, red_rgb_l, red_rgb_h):
             label = "R"
             if info["type"] == "road":
                 label += "R"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(int(pt)) + ","
+                road_index = pointsToRoadIndex[key]
+                road_color_dict[road_index] = "R"
             elif info["type"] == "settlement":
                 label += "S"
+                info["pts"].sort()
+                key = ""
+                for pt in info["pts"]:
+                    key += str(pt) + ","
+                settlement_index = pointsToSettlementIndex[key]
+                settlement_color_dict[settlement_index] = "R"
 
         # if info["type"] == "settlement":
         #     targeted_img = cv.resize(targeted_img, (200,200))
@@ -711,4 +896,252 @@ for info in road_settle_locs:
 
 plt.figure(figsize=(11,11))
 plt.imshow(annotated_img), plt.xticks([]), plt.yticks([])
+plt.show()
+
+##########################
+# Get color for each point
+##########################
+
+def getTypeFromAvgHSV(hsv):
+    type = 'none'
+    if hsv[0] >= 15 and hsv[0] <= 25 and \
+        hsv[1] >= 100 and hsv[1] <= 160 and \
+        hsv[2] >= 160 and hsv[2] <= 225:
+        type = 'wheat'
+    elif hsv[0] >= 8 and hsv[0] <= 27 and \
+        hsv[1] >= 80 and hsv[1] <= 145 and \
+        hsv[2] >= 100 and hsv[2] <= 180:
+        type = 'brick'
+    elif hsv[0] >= 50 and hsv[0] <= 145 and \
+        hsv[1] >= 28 and hsv[1] <= 55 and \
+        hsv[2] >= 100 and hsv[2] <= 175:
+        type = 'stone'
+    elif hsv[0] >= 26 and hsv[0] <= 75 and \
+        hsv[1] >= 25 and hsv[1] <= 110 and \
+        hsv[2] >= 75 and hsv[2] <= 135:
+        type = 'wood'
+    elif hsv[0] >= 32 and hsv[0] <= 45 and \
+        hsv[1] >= 80 and hsv[1] <= 160 and \
+        hsv[2] >= 120 and hsv[2] <= 200:
+        type = 'sheep'
+    return type
+
+average_circle_radius = 20
+e = 15
+num_pts = 10
+tiles = {}
+for i in range(18, 36):
+    circ = points[i]
+    avg = [0, 0, 0]
+    for j in range(1,num_pts+1):
+        x = int(circ[0] + (e+average_circle_radius)*np.cos(j*2*np.pi/10))
+        y = int(circ[1] + (e+average_circle_radius)*np.sin(j*2*np.pi/10))
+        avg += img_hsv[y, x, :]
+    avg = avg/num_pts
+    # points[i].append(getTypeFromAvgHSV(avg))
+    tiles[i] = getTypeFromAvgHSV(avg)
+
+
+##########################
+# Get point for each ship
+##########################
+
+# tie points to ship
+def distanceFromShipAndPoint(ship, point):
+    M = cv.moments(ship)
+    cX = int(M["m10"] / M["m00"])
+    cY = int(M["m01"] / M["m00"])
+    return math.sqrt( ((cX - point[0])**2) + ((cY - point[1])**2))
+
+shipPoints = []
+for c in contours:
+    minDistance = 99999
+    minPoint = 0
+    for i in range(18):
+        curDistance = distanceFromShipAndPoint(c, points[i])
+        if curDistance < minDistance:
+            minPoint = i
+            minDistance = curDistance
+    shipPoints.append(minPoint)
+
+##############################
+# Create simulated game board
+##############################
+
+blank_image = np.zeros((600,600,3), np.uint8)
+blank_image[:] = 255
+
+tile_num = [28, 27, 26, 29, 35, 34, 25, 18, 30, 36, 33, 24, 19, 31, 32, 23, 20, 21, 22]
+YCoordinates = [200, 300, 400, 150, 250, 350, 450, 100, 200, 300, 400, 500, 150, 250, 350, 450, 200, 300, 400]
+XCoordinates = [100, 100, 100, 200, 200, 200, 200, 300, 300, 300, 300, 300, 400, 400, 400, 400, 500, 500, 500]
+
+roadSettlements = [[3, 0], [0, 4], [4, 1], [1, 5], [5, 2], [2, 6], [6, 10], [10, 15], [15, 20], [20, 26], [26, 32], [32, 37], [37, 42], [42, 46], [46, 50], [50, 53], [53, 49], [49, 52], [52, 48], [48, 51], [51, 47], [47, 43], [43, 38], [38, 33], [33, 27], [27, 21], [21, 16], [16, 11], [11, 7], [7, 3], [12, 8], [8, 13], [13, 9], [9, 14], [14, 19], [19, 25], [25, 31], [31, 36], [36, 41], [41, 45], [45, 40], [40, 44], [44, 39], [39, 34], [34, 28], [28, 22], [22, 17], [17, 12], [23, 18], [18, 24], [24, 30], [30, 35], [35, 29], [29, 23], [7, 12], [4, 8], [5, 9], [14, 10], [25, 20], [31, 37], [41, 46], [45, 49], [44, 48], [39, 43], [28, 33], [22, 16], [17, 23], [18, 13], [24, 19], [30, 36], [35, 40], [29, 34]]
+
+
+settlementYCoodinates = [200, 300, 400, 150, 250, 350, 450, 150, 250, 350, 450, 100, 200, 300, 400, 500, 100, 200, 300, 400, 500, 50, 150, 250, 350, 450, 550, 50, 150, 250, 350, 450, 550, 100, 200, 300, 400, 500, 100, 200, 300, 400, 500, 150, 250, 350, 450, 150, 250, 350, 450, 200, 300, 400]
+settlementXCoodinates = []
+for i in range(3):
+    settlementXCoodinates.append(50)
+for i in range(4):
+    settlementXCoodinates.append(75)
+for i in range(4):
+    settlementXCoodinates.append(135)
+for i in range(5):
+    settlementXCoodinates.append(160)
+for i in range(5):
+    settlementXCoodinates.append(235)
+for i in range(6):
+    settlementXCoodinates.append(260)
+for i in range(6):
+    settlementXCoodinates.append(340)
+for i in range(5):
+    settlementXCoodinates.append(365)
+for i in range(5):
+    settlementXCoodinates.append(440)
+for i in range(4):
+    settlementXCoodinates.append(465)
+for i in range(4):
+    settlementXCoodinates.append(525)
+for i in range(3):
+    settlementXCoodinates.append(550)
+
+ship_num = [0, 17, 1, 16, 2, 15, 3, 14, 4, 13, 5, 12, 6, 11, 7, 10, 8, 9]
+shipCoordinatesY = [25, 70, 70, 120, 120, 160, 160, 250, 250, 350, 350, 440, 440, 480, 480, 530, 530, 575]
+shipCoordinatesX = [300, 200, 400, 100, 500, 30, 570, 30, 570, 30, 570, 30, 570, 100, 500, 200, 400, 300]
+
+ship_map = {}
+for i in range(len(ship_num)):
+    ship_map[ship_num[i]] = [shipCoordinatesX[i], shipCoordinatesY[i]]
+
+shipToSettlement = {
+   0: [21, 27],
+   1: [33, 38],
+   2: [38, 43],
+   3: [47, 51],
+   4: [48, 52],
+   5: [52, 49],
+   6: [53, 50],
+   7: [42, 46],
+   8: [37, 42],
+   9: [26, 32],
+   10: [15, 20],
+   11: [10, 15],
+   12: [2, 6],
+   13: [1, 5],
+   14: [1, 4],
+   15: [0, 3],
+   16: [7, 11],
+   17: [11, 16]
+}
+
+def typeToColor(type):
+    woodColor = (0,100,0)
+    sheepColor = (144,238,144)
+    wheatColor = (255,215,0)
+    stoneColor = (145, 142, 133)
+    brickColor = (220, 85, 57)
+
+    if type == "wheat":
+        return wheatColor
+    if type == "brick":
+        return brickColor
+    if type == "stone":
+        return stoneColor
+    if type == "wood":
+        return woodColor
+    if type == "sheep":
+        return sheepColor
+
+    return (0, 0, 0)
+
+def get_point_from_angle_dist(orig, ang, dist):
+    return (orig[0]+dist*math.cos(ang), orig[1]+dist*math.sin(ang))
+    
+def drawRoad(img, first_pt, second_pt, color):
+    box_w = 4
+    box_h = 20
+    ang = angleBetweenCircles(first_pt, second_pt)
+    dist = np.sqrt((box_h/2)**2 + (box_w/2)**2)
+    alpha = math.atan2((box_h/2),(box_w/2))
+    beta = np.pi/2-alpha
+    ang1 = ang+beta
+    ang2 = ang1+2*alpha
+    ang3 = ang-beta
+    ang4 = ang3-2*alpha
+    road_loc = (int((first_pt[0]+second_pt[0])/2), int((first_pt[1]+second_pt[1])/2))
+    pt1 = get_point_from_angle_dist(road_loc, ang1, dist)
+    pt2 = get_point_from_angle_dist(road_loc, ang2, dist)
+    pt3 = get_point_from_angle_dist(road_loc, ang3, dist)
+    pt4 = get_point_from_angle_dist(road_loc, ang4, dist)
+    box_pts = np.array([[pt1],[pt2],[pt4],[pt3]],np.int32)
+    box_pts = box_pts.reshape((-1, 1, 2))
+    # cv.polylines(check_loc_img, [box_pts], True, (0,255,0), 2)
+    cv.fillPoly(img, [box_pts], color)
+    if (color == (255, 255, 255)):
+        cv.polylines(img, [box_pts], True, (0,0,0), 1)
+
+
+coordinates = {}
+for i in range(len(XCoordinates)):
+    coordinates[tile_num[i]] = [XCoordinates[i], YCoordinates[i]]
+
+    pts = []
+    cur_angle = -math.pi / 3
+    for p in range(6):
+        radius = 35
+        pointX = XCoordinates[i] + radius * math.cos(cur_angle)
+        pointY = YCoordinates[i] + radius * math.sin(cur_angle)
+        cur_angle += math.pi / 3
+        pts.append([int(pointX), int(pointY)])
+    pts = np.asarray(pts)
+    pts = pts.reshape((-1,1,2)) 
+    
+    if (tile_num[i] == 36):
+        cv.fillPoly(blank_image, [pts], (0, 0, 0))
+        cv.putText(blank_image, str(tile_num[i]), (XCoordinates[i] - 20, YCoordinates[i] - 15), cv.FONT_HERSHEY_SIMPLEX, .3, (255, 255, 255), 1)
+    else:
+        cur_color = typeToColor(tiles[tile_num[i]])
+        cv.fillPoly(blank_image, [pts], cur_color)
+        cv.putText(blank_image, str(tile_num[i]), (XCoordinates[i] - 20, YCoordinates[i] - 15), cv.FONT_HERSHEY_SIMPLEX, .3, (0, 0, 0), 1)
+
+for i in range(len(settlementXCoodinates)):
+    colorStr = settlement_color_dict[i]
+    if (colorStr == None):
+        cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (211, 211, 211), -1)
+    if (colorStr == "R"):
+        cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (255, 0, 0), -1)
+    if (colorStr == "B"):
+        cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (0, 0, 255), -1)
+    if (colorStr == "O"):
+        cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (255,165,0), -1)
+    if (colorStr == "W"):
+        cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (255, 255, 255), -1)
+        cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (0, 0, 0), 1)
+    # cv.putText(blank_image, str(i), (settlementXCoodinates[i], settlementYCoodinates[i]), cv.FONT_HERSHEY_SIMPLEX, .3, (0, 0, 0), 1)
+    
+for i in range(len(roadSettlements)):
+    settlementPair = roadSettlements[i]
+    colorStr = road_color_dict[i]
+    if (colorStr == None):
+        drawRoad(blank_image, (settlementXCoodinates[settlementPair[0]], settlementYCoodinates[settlementPair[0]]), (settlementXCoodinates[settlementPair[1]], settlementYCoodinates[settlementPair[1]]), (211, 211, 211))
+    if (colorStr == "R"):
+        drawRoad(blank_image, (settlementXCoodinates[settlementPair[0]], settlementYCoodinates[settlementPair[0]]), (settlementXCoodinates[settlementPair[1]], settlementYCoodinates[settlementPair[1]]), (255, 0, 0))
+    if (colorStr == "B"):
+        drawRoad(blank_image, (settlementXCoodinates[settlementPair[0]], settlementYCoodinates[settlementPair[0]]), (settlementXCoodinates[settlementPair[1]], settlementYCoodinates[settlementPair[1]]), (0, 0, 255))
+    if (colorStr == "O"):
+        drawRoad(blank_image, (settlementXCoodinates[settlementPair[0]], settlementYCoodinates[settlementPair[0]]), (settlementXCoodinates[settlementPair[1]], settlementYCoodinates[settlementPair[1]]), (255,165,0))
+    if (colorStr == "W"):
+        drawRoad(blank_image, (settlementXCoodinates[settlementPair[0]], settlementYCoodinates[settlementPair[0]]), (settlementXCoodinates[settlementPair[1]], settlementYCoodinates[settlementPair[1]]), (255, 255, 255))
+        # cv.circle(blank_image, (settlementXCoodinates[i], settlementYCoodinates[i]), 5, (0, 0, 0), 1)
+
+for pointIndex in shipPoints:
+    shipSettlements = shipToSettlement[pointIndex]
+    cv.circle(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), 8, (111, 78, 55), -1)
+    drawRoad(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), (settlementXCoodinates[shipSettlements[0]], settlementYCoodinates[shipSettlements[0]]), (111, 78, 55))
+    drawRoad(blank_image, (ship_map[pointIndex][0], ship_map[pointIndex][1]), (settlementXCoodinates[shipSettlements[1]], settlementYCoodinates[shipSettlements[1]]), (111, 78, 55))
+
+plt.figure(figsize=(11,11))
+plt.imshow(blank_image)
+plt.xticks([])
+plt.yticks([])
 plt.show()
