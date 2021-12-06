@@ -755,7 +755,7 @@ road_set_labeled_img = img.copy()
 ########################
 nums_to_detect = []
 for pt in points[18:36]:
-    wo2=40
+    wo2=43
     high_res_pt = (int(pt[0])*2, int(pt[1])*2)
     # cv.circle(img_high_res, high_res_pt, 64, (0, 255, 0), -1)
     cv.rectangle(img_high_res, pt1=(high_res_pt[0]-wo2, high_res_pt[1]-wo2), pt2=(high_res_pt[0]+wo2,high_res_pt[1]+wo2), color=(255, 255, 0), thickness=2)
