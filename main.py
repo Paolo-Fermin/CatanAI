@@ -9,13 +9,16 @@ import tensorflow as tf
 
 path_to_image = 'photos/test5_1.jpg'
 path_to_ship_detection_model = './models/ship_detection_model_2'
-path_to_num_detection_model = './models/white_edges_classifier_2'
+# path_to_num_detection_model = './models/white_edges_classifier_2'
+# path_to_num_detection_model = './models/black_edges_classifier'
+path_to_num_detection_model = './models/number_classifier'
 
 
 # Import image, resize, and convert to other useful formats
 # img_orig = cv.imread('photos/testimg3.jpg')
 img_orig = cv.imread(path_to_image)
 img_high_res = cv.cvtColor(imutils.resize(img_orig, width=2000), cv.COLOR_BGR2RGB)
+img_higher_res = img_orig.copy()
 img_orig = imutils.resize(img_orig, width=1000)
 img_gray = cv.cvtColor(img_orig, cv.COLOR_BGR2GRAY)
 img = cv.cvtColor(img_orig, cv.COLOR_BGR2RGB)
@@ -47,16 +50,16 @@ ship_model = tf.keras.models.load_model(path_to_ship_detection_model)
 ship_model.summary()
 
 # save the model to a json format
-model_json = ship_model.to_json()
+ship_model_json = ship_model.to_json()
 
-with open("model.json", "w") as json_file:
-    json_file.write(model_json)
+with open("ship_model.json", "w") as json_file:
+    json_file.write(ship_model_json)
 
 # serialize weights to h5
-ship_model.save_weights('model.h5')
+ship_model.save_weights('ship_model.h5')
 
 # export the whole model to h5
-ship_model.save('full_model.h5')
+ship_model.save('ship_full_model.h5')
 
 ship_class_names = ['brick', 'question', 'sheep', 'stone', 'wheat', 'wood']
 
@@ -69,14 +72,14 @@ num_model = tf.keras.models.load_model(path_to_num_detection_model)
 num_model.summary()
 
 # save the model to a json format
-model_json = num_model.to_json()
+num_model_json = num_model.to_json()
 
-with open("model.json", "w") as json_file:
-    json_file.write(model_json)
+with open("num_model.json", "w") as json_file:
+    json_file.write(num_model_json)
     # serialize weights to h5
-num_model.save_weights('model.h5')
+num_model.save_weights('num_model.h5')
 # export the whole model to h5
-num_model.save('full_model.h5')
+num_model.save('num_full_model.h5')
 
 ############################################
 # Port detection
@@ -371,9 +374,10 @@ for circ in circles:
 # plt.figure(figsize=(11,11))
 # plt.imshow(filter_img, cmap='gray')
 # plt.title('filter image'), plt.xticks([]), plt.yticks([])
-# plt.figure(figsize=(11,11))
-# plt.imshow(new_img_hsv)
-# plt.title('hsv image'), plt.xticks([]), plt.yticks([])
+plt.figure(figsize=(11,11))
+plt.imshow(new_img_hsv)
+plt.title('hsv image'), plt.xticks([]), plt.yticks([])
+plt.show()
 
 # Separate circles into numbers, dice, and bandit
 bandit_loc = []
@@ -757,6 +761,7 @@ for pt in points[18:36]:
     # cv.circle(img_high_res, high_res_pt, 64, (0, 255, 0), -1)
     cv.rectangle(img_high_res, pt1=(high_res_pt[0]-wo2, high_res_pt[1]-wo2), pt2=(high_res_pt[0]+wo2,high_res_pt[1]+wo2), color=(255, 255, 0), thickness=2)
     circ_img = img_high_res[high_res_pt[1]-wo2:high_res_pt[1]+wo2,high_res_pt[0]-wo2:high_res_pt[0]+wo2]
+    # circ_img_resized = cv.resize(circ_img, (128,128))
     circ_img_resized = cv.resize(circ_img, (128,128))
     nums_to_detect.append(circ_img_resized)
 plt.figure(figsize=(6,6))
@@ -789,7 +794,7 @@ plt.imshow(annotated_img)
 plt.show()
 
 
-# Crue if c1 between c2_l and c2_h, false otherwise
+# True if c1 between c2_l and c2_h, false otherwise
 def between_color_range(c1,c2_l,c2_h):
     if c1[0] > c2_l[0] and c1[1] > c2_l[1] and c1[2] > c2_l[2] and c1[0] < c2_h[0] and c1[1] < c2_h[1] and c1[2] < c2_h[2]:
         return True
