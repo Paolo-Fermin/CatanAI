@@ -8,7 +8,6 @@ import os
 import PIL
 import PIL.Image
 import tensorflow as tf
-import tensorflow_datasets as tfds
 
 path_to_image = 'photos/test5_1.jpg'
 path_to_ship_detection_model = './models/ship_detection_model_2'
