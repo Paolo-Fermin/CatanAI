@@ -4,13 +4,13 @@ from matplotlib import pyplot as plt
 import imutils
 import math
 from collections import defaultdict
+import os
+import PIL
 import PIL.Image
 import tensorflow as tf
 
 path_to_image = 'photos/test5_1.jpg'
 path_to_ship_detection_model = './models/ship_detection_model_2'
-# path_to_num_detection_model = './models/white_edges_classifier_2'
-# path_to_num_detection_model = './models/black_edges_classifier'
 path_to_num_detection_model = './models/number_classifier'
 
 
@@ -18,7 +18,6 @@ path_to_num_detection_model = './models/number_classifier'
 # img_orig = cv.imread('photos/testimg3.jpg')
 img_orig = cv.imread(path_to_image)
 img_high_res = cv.cvtColor(imutils.resize(img_orig, width=2000), cv.COLOR_BGR2RGB)
-img_higher_res = img_orig.copy()
 img_orig = imutils.resize(img_orig, width=1000)
 img_gray = cv.cvtColor(img_orig, cv.COLOR_BGR2GRAY)
 img = cv.cvtColor(img_orig, cv.COLOR_BGR2RGB)
@@ -50,16 +49,16 @@ ship_model = tf.keras.models.load_model(path_to_ship_detection_model)
 ship_model.summary()
 
 # save the model to a json format
-ship_model_json = ship_model.to_json()
+model_json = ship_model.to_json()
 
-with open("ship_model.json", "w") as json_file:
-    json_file.write(ship_model_json)
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
 
 # serialize weights to h5
-ship_model.save_weights('ship_model.h5')
+ship_model.save_weights('model.h5')
 
 # export the whole model to h5
-ship_model.save('ship_full_model.h5')
+ship_model.save('full_model.h5')
 
 ship_class_names = ['brick', 'question', 'sheep', 'stone', 'wheat', 'wood']
 
@@ -72,14 +71,14 @@ num_model = tf.keras.models.load_model(path_to_num_detection_model)
 num_model.summary()
 
 # save the model to a json format
-num_model_json = num_model.to_json()
+model_json = num_model.to_json()
 
-with open("num_model.json", "w") as json_file:
-    json_file.write(num_model_json)
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
     # serialize weights to h5
-num_model.save_weights('num_model.h5')
+num_model.save_weights('model.h5')
 # export the whole model to h5
-num_model.save('num_full_model.h5')
+num_model.save('full_model.h5')
 
 ############################################
 # Port detection
@@ -374,10 +373,9 @@ for circ in circles:
 # plt.figure(figsize=(11,11))
 # plt.imshow(filter_img, cmap='gray')
 # plt.title('filter image'), plt.xticks([]), plt.yticks([])
-plt.figure(figsize=(11,11))
-plt.imshow(new_img_hsv)
-plt.title('hsv image'), plt.xticks([]), plt.yticks([])
-plt.show()
+# plt.figure(figsize=(11,11))
+# plt.imshow(new_img_hsv)
+# plt.title('hsv image'), plt.xticks([]), plt.yticks([])
 
 # Separate circles into numbers, dice, and bandit
 bandit_loc = []
@@ -756,19 +754,20 @@ road_set_labeled_img = img.copy()
 ########################
 nums_to_detect = []
 for pt in points[18:36]:
-    wo2=43
+    wo2=40
     high_res_pt = (int(pt[0])*2, int(pt[1])*2)
     # cv.circle(img_high_res, high_res_pt, 64, (0, 255, 0), -1)
     cv.rectangle(img_high_res, pt1=(high_res_pt[0]-wo2, high_res_pt[1]-wo2), pt2=(high_res_pt[0]+wo2,high_res_pt[1]+wo2), color=(255, 255, 0), thickness=2)
     circ_img = img_high_res[high_res_pt[1]-wo2:high_res_pt[1]+wo2,high_res_pt[0]-wo2:high_res_pt[0]+wo2]
-    # circ_img_resized = cv.resize(circ_img, (128,128))
     circ_img_resized = cv.resize(circ_img, (128,128))
     nums_to_detect.append(circ_img_resized)
-plt.figure(figsize=(6,6))
-plt.imshow(circ_img)
-plt.show()
+
+#plt.figure(figsize=(6,6))
+#plt.imshow(circ_img)
+#plt.show()
 
 nums_locations = []
+num_results = []
 for i in range(len(nums_to_detect)):
 
     # predict on the model
@@ -782,9 +781,10 @@ for i in range(len(nums_to_detect)):
     # ax.title.set_text(cls)
 
     loc = points[i+18]
-    port_results.append(cls)
+    num_results.append(cls)
     print(f"cls: {cls}")
     cv.putText(annotated_img, cls, (int(loc[0]-60), int(loc[1]-30)), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+    nums_locations.append([int(loc[0]-60), int(loc[1]-30)])
 
     # plt.imshow(nums_extracted[i])
     # plt.xticks([]), plt.yticks([])
@@ -794,7 +794,7 @@ plt.imshow(annotated_img)
 plt.show()
 
 
-# True if c1 between c2_l and c2_h, false otherwise
+# Crue if c1 between c2_l and c2_h, false otherwise
 def between_color_range(c1,c2_l,c2_h):
     if c1[0] > c2_l[0] and c1[1] > c2_l[1] and c1[2] > c2_l[2] and c1[0] < c2_h[0] and c1[1] < c2_h[1] and c1[2] < c2_h[2]:
         return True
@@ -1137,6 +1137,18 @@ for portLocation in ports_locations:
             minDistance = curDistance
     shipPoints.append(minPoint)
 
+numberPoints = []
+for num_location in nums_locations:
+    minDistance = 99999
+    minPoint = 0
+    for i in range(18, 37):
+        curDistance = distanceFromShipAndPoint(num_location, points[i])
+        if curDistance < minDistance:
+            minPoint = i
+            minDistance = curDistance
+    numberPoints.append(minPoint)
+
+
 ##############################
 # Create simulated game board
 ##############################
@@ -1147,6 +1159,10 @@ blank_image[:] = 255
 tile_num = [28, 27, 26, 29, 35, 34, 25, 18, 30, 36, 33, 24, 19, 31, 32, 23, 20, 21, 22]
 YCoordinates = [200, 300, 400, 150, 250, 350, 450, 100, 200, 300, 400, 500, 150, 250, 350, 450, 200, 300, 400]
 XCoordinates = [100, 100, 100, 200, 200, 200, 200, 300, 300, 300, 300, 300, 400, 400, 400, 400, 500, 500, 500]
+
+tile_map  = defaultdict(lambda: None)
+for i in range(len(tile_num)):
+    tile_map[tile_num[i]] = [XCoordinates[i], YCoordinates[i]]
 
 roadSettlements = [[3, 0], [0, 4], [4, 1], [1, 5], [5, 2], [2, 6], [6, 10], [10, 15], [15, 20], [20, 26], [26, 32], [32, 37], [37, 42], [42, 46], [46, 50], [50, 53], [53, 49], [49, 52], [52, 48], [48, 51], [51, 47], [47, 43], [43, 38], [38, 33], [33, 27], [27, 21], [21, 16], [16, 11], [11, 7], [7, 3], [12, 8], [8, 13], [13, 9], [9, 14], [14, 19], [19, 25], [25, 31], [31, 36], [36, 41], [41, 45], [45, 40], [40, 44], [44, 39], [39, 34], [34, 28], [28, 22], [22, 17], [17, 12], [23, 18], [18, 24], [24, 30], [30, 35], [35, 29], [29, 23], [7, 12], [4, 8], [5, 9], [14, 10], [25, 20], [31, 37], [41, 46], [45, 49], [44, 48], [39, 43], [28, 33], [22, 16], [17, 23], [18, 13], [24, 19], [30, 36], [35, 40], [29, 34]]
 
@@ -1313,6 +1329,44 @@ wheatColor = (255,215,0)
 stoneColor = (145, 142, 133)
 brickColor = (220, 85, 57)
 
+def strToNum(numStr):
+    if (numStr == "one"):
+        return 1
+    if (numStr == "two"):
+        return 2
+    if (numStr == "three"):
+        return 3
+    if (numStr == "four"):
+        return 4
+    if (numStr == "five"):
+        return 5
+    if (numStr == "six"):
+        return 6
+    if (numStr == "seven"):
+        return 7
+    if (numStr == "eight"):
+        return 8
+    if (numStr == "nine"):
+        return 9
+    if (numStr == "ten"):
+        return 10
+    if (numStr == "eleven"):
+        return 11
+    if (numStr == "twelve"):
+        return 12
+    return -1
+
+for i in range(len(numberPoints)):
+    pointIndex = numberPoints[i]
+    tileCoords = tile_map[pointIndex]
+    num = num_results[i]
+    num = strToNum(num)
+    
+    if (num < 10):
+        cv.putText(blank_image, str(num), (tileCoords[0] - 8, tileCoords[1] + 8), cv.FONT_HERSHEY_SIMPLEX, .8, (0, 0, 0), 2)
+    else:
+        cv.putText(blank_image, str(num), (tileCoords[0] - 16, tileCoords[1] + 8), cv.FONT_HERSHEY_SIMPLEX, .8, (0, 0, 0), 2)
+    
 
 for i in range(len(shipPoints)):
     pointIndex = shipPoints[i]

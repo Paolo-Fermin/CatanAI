@@ -1,0 +1,4 @@
+name: catan_env
+channels:
+  - defaults
+prefix: C:\Users\paolo\Anaconda3\envs\catan_env
